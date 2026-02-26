@@ -1,0 +1,151 @@
+# Description of what this change includes
+# Revision number
+# Date
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CloudFormation Template: VPC-JARMOO8497 with 3 AZs in us-west-2'
+
+Resources:
+  # --- VPC Configuration ---
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: VPC-JARMOO8497
+
+  # --- Internet Connectivity ---
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: VPC-JARMOO8497-IGW
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # --- Public Route Table ---
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: VPC-JARMOO8497-Public-RT
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  # --- Subnets (Dynamic AZ Mapping) ---
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: VPC-JARMOO8497-Subnet-1
+        - Key: Tier
+          Value: Public
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: 10.0.2.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: VPC-JARMOO8497-Subnet-2
+        - Key: Tier
+          Value: Public
+
+  PublicSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [2, !GetAZs '']
+      CidrBlock: 10.0.3.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: VPC-JARMOO8497-Subnet-3
+        - Key: Tier
+          Value: Public
+
+  # --- Route Table Associations ---
+  Subnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  Subnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  Subnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet3
+      RouteTableId: !Ref PublicRouteTable
+
+  # --- RDS Instance ---
+  RdsInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      VPCSecurityGroups:
+        - <SECURITY-GROUP-ID>
+      AllocatedStorage: '5'
+      DBInstanceClass: db.t3.micro
+      DBInstanceIdentifier: playground-db
+      Engine: MySQL
+      MasterUsername: Admin
+      MasterUserPassword: CloudAcademy123!
+
+Outputs:
+  VpcId:
+    Description: 'The ID of the created VPC'
+    Value: !Ref VPC
+    Export:
+      Name: VPC-JARMOO8497-ID
+
+  PublicSubnet1Id:
+    Description: 'Public subnet 1 ID'
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: VPC-JARMOO8497-Subnet1-ID
+
+  PublicSubnet2Id:
+    Description: 'Public subnet 2 ID'
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: VPC-JARMOO8497-Subnet2-ID
+
+  PublicSubnet3Id:
+    Description: 'Public subnet 3 ID'
+    Value: !Ref PublicSubnet3
+    Export:
+      Name: VPC-JARMOO8497-Subnet3-ID
+
+  PublicRouteTableId:
+    Description: 'Public route table ID'
+    Value: !Ref PublicRouteTable
+    Export:
+      Name: VPC-JARMOO8497-PublicRT-ID
